@@ -14,9 +14,10 @@ import net.mamoe.mirai.event.subscribeGroupMessages
 import net.mamoe.mirai.message.data.Image
 import net.mamoe.mirai.utils.ExternalResource.Companion.uploadAsImage
 import net.mamoe.mirai.utils.info
+import okhttp3.internal.wait
 import org.charly.plugin.utils.GenerateCloud
-import org.charly.plugin.utils.GroupList
-import org.charly.plugin.utils.GroupList.enable
+import org.charly.plugin.utils.Config
+import org.charly.plugin.utils.Config.enable
 import org.charly.plugin.utils.RecordData
 import java.text.SimpleDateFormat
 import java.util.*
@@ -32,17 +33,9 @@ object WordCloud : KotlinPlugin(
         info("""基于kumo的词云生成插件""")
     }
 ) {
-    private val clearCache = object : TimerTask() {
+    private val dailyTask = object : TimerTask() {
         override fun run() {
-            if (RecordData.record.isNotEmpty()) {
-                RecordData.record.clear()
-                WordCloud.logger.info("群消息自动清理")
-            }
-        }
-    }
-    private val autoSend = object : TimerTask() {
-        override fun run() {
-            logger.info("自动发送词云")
+            logger.error("自动发送词云")
             if (RecordData.record.isEmpty()) {
                 logger.info("记录为空，无法发送词云")
                 return
@@ -54,13 +47,16 @@ object WordCloud : KotlinPlugin(
                         if (message.isEmpty())
                             continue
                         try {
-                            group?.sendImage(GenerateCloud.generateCloud(groupId)!!)
+                            group?.sendImage(GenerateCloud.generateCloud(groupId, RecordData.record)!!)
                             group?.sendMessage("这是本群今日词云噢（￣︶￣）↗　")
                         } catch (e: RuntimeException) {
-                            logger.info("词云图片上传出错")
+                            logger.info("${groupId}:词云图片上传出错")
                         }
                         delay(200)
                     }
+                    RecordData.backup = RecordData.record
+                    RecordData.record.clear()
+                    logger.info("备份今日记录")
                 }
             }
         }
@@ -70,25 +66,20 @@ object WordCloud : KotlinPlugin(
         init()
         logger.info { "WordCloud Plugin loaded" }
         GlobalEventChannel.subscribeGroupMessages {
-            startsWith("/cy") { msg ->
-                if (!group.enable() || sender.id != 1546114957L) return@startsWith
-                if (msg != "") return@startsWith
-                logger.info("发起词云请求")
+            matching(Regex(Config.commandRegex)) {
+                logger.info("发起昨日词云请求")
                 try {
-                    val imageMessage: Image =
-                        GenerateCloud.generateCloud(subject.id)?.uploadAsImage(subject) ?: return@startsWith
-                    subject.sendMessage(imageMessage)
+                    val imageMessage = GenerateCloud.generateCloud(group.id, RecordData.backup)?.uploadAsImage(group)
+                    subject.sendMessage(imageMessage!!)
                 } catch (e: RuntimeException) {
-                    WordCloud.logger.error(e)
-                    WordCloud.logger.error("图片上传失败, 请检查网络")
+                    WordCloud.logger.error("图片上传失败, 请检查网络或backup")
                 }
             }
         }
         GlobalEventChannel.subscribeGroupMessages {
             startsWith("") { msg ->
                 if (!group.enable()) return@startsWith
-                val blockVal = listOf("/cy", "语音消息", "不支持的消息", "视频", "https", "@", "?xml")
-                for (v in blockVal) {
+                for (v in Config.blockKey) {
                     if (msg.contains(v))
                         return@startsWith
                 }
@@ -115,33 +106,31 @@ object WordCloud : KotlinPlugin(
     }
 
     override fun onDisable() {
+        dailyTask.cancel()
         logger.info { "WordCloud 插件已卸载" }
     }
 
     private fun init() {
         RecordData.reload()
-        GroupList.reload()
+        Config.reload()
 
 
         val sdf = SimpleDateFormat("yyyy.MM.dd HH:mm:ss")
         val now = Calendar.getInstance()
-        // 清理内存的时间
-        val ccStartTime: Long =
-            sdf.parse(
-                "${now.get(Calendar.YEAR)}." +
-                        "${now.get(Calendar.MONTH) + 1}." +
-                        "${now.get(Calendar.DAY_OF_MONTH) + 1} 00:00:00"
-            ).time
         // 发送词云的时间
-        val asStartTime: Long =
+
+        val date = Date(
             sdf.parse(
                 "${now.get(Calendar.YEAR)}." +
                         "${now.get(Calendar.MONTH) + 1}." +
-                        "${now.get(Calendar.DAY_OF_MONTH)} 23:45:00"
+                        "${now.get(Calendar.DAY_OF_MONTH)} ${Config.dailyTaskExecTime}"
             ).time
+        )
+        if (date.before(Date()))
+            date.time += 24 * 60 * 60 * 1000
+
         try {
-            Timer().schedule(clearCache, Date(ccStartTime), 24 * 60 * 60 * 1000)
-            Timer().schedule(autoSend, Date(asStartTime), 24 * 60 * 60 * 1000)
+            Timer().schedule(dailyTask, date, 24 * 60 * 60 * 1000)
             logger.info("定时任务已添加")
         } catch (e: Exception) {
             logger.error("定时任务添加失败")
