@@ -36,7 +36,7 @@ object WordCloud : KotlinPlugin(
 ) {
     private val dailyTask = object : TimerTask() {
         override fun run() {
-            logger.error("自动发送词云")
+            logger.info("自动发送词云")
             if (RecordData.record.isEmpty()) {
                 logger.info("记录为空，无法发送词云")
                 return
