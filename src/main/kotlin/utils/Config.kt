@@ -14,6 +14,11 @@ object Config : AutoSavePluginConfig("Config") {
         return this.id in groupList
     }
 
+    @ValueDescription("词云管理员")
+    val admin:Long by value()
+    @ValueDescription("管理员今日词云查询指令")
+    val adminCommand:String by value("cy")
+
     @ValueDescription("群消息屏蔽关键词")
     val blockKey: List<String> by value(listOf("cy","词云", "语音消息", "不支持的消息", "视频", "@", "?xml", "https:", "http:"))
 

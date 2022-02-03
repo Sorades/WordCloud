@@ -10,6 +10,7 @@ import net.mamoe.mirai.console.util.ConsoleExperimentalApi
 import net.mamoe.mirai.contact.Contact.Companion.sendImage
 import net.mamoe.mirai.contact.Group
 import net.mamoe.mirai.event.GlobalEventChannel
+import net.mamoe.mirai.event.subscribeFriendMessages
 import net.mamoe.mirai.event.subscribeGroupMessages
 import net.mamoe.mirai.message.data.Image
 import net.mamoe.mirai.utils.ExternalResource.Companion.uploadAsImage
@@ -67,9 +68,31 @@ object WordCloud : KotlinPlugin(
         logger.info { "WordCloud Plugin loaded" }
         GlobalEventChannel.subscribeGroupMessages {
             matching(Regex(Config.commandRegex)) {
+                if (!group.enable()) return@matching
                 logger.info("发起昨日词云请求")
                 try {
                     val imageMessage = GenerateCloud.generateCloud(group.id, RecordData.backup)?.uploadAsImage(group)
+                    subject.sendMessage(imageMessage!!)
+                } catch (e: RuntimeException) {
+                    WordCloud.logger.error("图片上传失败, 请检查网络或backup")
+                }
+            }
+        }
+        GlobalEventChannel.subscribeFriendMessages {
+            startsWith(Config.adminCommand) { msg ->
+                if (sender.id != Config.admin) return@startsWith
+                val groupId:Long
+                try {
+                    groupId = msg.replace(" ", "").toLong()
+                    if (!RecordData.record.containsKey(groupId))
+                        throw Exception("不存在该群的记录")
+                }catch (e:Exception){
+                    sender.sendMessage(e.toString())
+                    return@startsWith
+                }
+                logger.info("发起今日词云请求")
+                try {
+                    val imageMessage = GenerateCloud.generateCloud(groupId, RecordData.record)?.uploadAsImage(sender)
                     subject.sendMessage(imageMessage!!)
                 } catch (e: RuntimeException) {
                     WordCloud.logger.error("图片上传失败, 请检查网络或backup")
