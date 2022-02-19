@@ -28,7 +28,7 @@ object WordCloud : KotlinPlugin(
     JvmPluginDescription(
         id = "org.charly.plugin.WordCloud",
         name = "Mirai词云插件",
-        version = "1.0.0",
+        version = "1.0.1",
     ) {
         author("CharlyWayne")
         info("""基于kumo的词云生成插件""")

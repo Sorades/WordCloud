@@ -25,10 +25,10 @@ object Config : AutoSavePluginConfig("Config") {
     @ValueDescription("自动清理和备份的时间设定")
     val dailyTaskExecTime: String by value("22:00:00")
 
-    @ValueDescription("遮罩图片名")
+    @ValueDescription("遮罩图片，找不到则默认600*600的矩形")
     val maskPicName: String by value("1.png")
 
-    @ValueDescription("字体名称")
+    @ValueDescription("字体名称，需和文件对应，找不到则默认楷体")
     val fontName: String by value("字体.ttf")
 
     @ValueDescription("词语最短长度")
@@ -37,10 +37,10 @@ object Config : AutoSavePluginConfig("Config") {
     @ValueDescription("词频")
     val wordFreToReturn: Int by value(600)
 
-    @ValueDescription("边界")
+    @ValueDescription("边界大小")
     val padding: Int by value(2)
 
-    @ValueDescription("词云字体颜色")
+    @ValueDescription("词云字体颜色，填十六进制")
     val colors: List<Int> by value(
         listOf(
             0xfbd023,
@@ -53,14 +53,14 @@ object Config : AutoSavePluginConfig("Config") {
         )
     )
 
-    @ValueDescription("词云背景颜色, 默认白色")
+    @ValueDescription("词云背景颜色, 默认白色0xffffff")
     val backColor:Int by value(0xffffff)
 
     @ValueDescription("词云梯度方式,0表示Linear, 1表示Sqrt")
-    val fontScalar:Int by value(1)
+    val fontScalar:Int by value(0)
 
     @ValueDescription("最小字体")
-    val fontMin:Int by value(8)
+    val fontMin:Int by value(6)
 
     @ValueDescription("最大字体")
     val fontMax:Int by value(80)

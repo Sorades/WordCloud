@@ -3,6 +3,7 @@ package org.charly.plugin.utils
 import com.kennycason.kumo.CollisionMode
 import com.kennycason.kumo.WordCloud
 import com.kennycason.kumo.bg.PixelBoundaryBackground
+import com.kennycason.kumo.bg.RectangleBackground
 import com.kennycason.kumo.font.KumoFont
 import com.kennycason.kumo.font.scale.LinearFontScalar
 import com.kennycason.kumo.font.scale.SqrtFontScalar
@@ -23,7 +24,7 @@ import org.charly.plugin.WordCloud as wc
 
 
 object GenerateCloud {
-    fun generateCloud(groupId: Long,data:MutableMap<Long, MutableList<String>>): ExternalResource? {
+    fun generateCloud(groupId: Long, data: MutableMap<Long, MutableList<String>>): ExternalResource? {
         //建立词频分析器，设置词频，以及词语最短长度
         val frequencyAnalyzer = FrequencyAnalyzer()
         frequencyAnalyzer.setWordFrequenciesToReturn(Config.wordFreToReturn)
@@ -40,16 +41,24 @@ object GenerateCloud {
 
         // 打开遮罩图片
         val maskPicFile = File("${wc.dataFolder}/${Config.maskPicName}")
-        val mask = ImageIO.read(maskPicFile)
-
-        //设置图片分辨率
-        val dimension = Dimension(mask.width, mask.height)
+        var dimension = Dimension(600, 600)
+        if (maskPicFile.exists()) {
+            // 如果文件存在，设置词云遮罩
+            val mask = ImageIO.read(maskPicFile)
+            dimension = Dimension(mask.width, mask.height)
+        }
         //此处的设置采用内置常量即可，生成词云对象
         val wordCloud = WordCloud(dimension, CollisionMode.PIXEL_PERFECT)
-        //设置边界与字体
-        wordCloud.setPadding(Config.padding)
-        wordCloud.setBackground(PixelBoundaryBackground(maskPicFile))
 
+        //设置边界
+        wordCloud.setPadding(Config.padding)
+
+        // 设置背景
+        if (maskPicFile.exists())
+            wordCloud.setBackground(PixelBoundaryBackground(maskPicFile))
+        else wordCloud.setBackground(RectangleBackground(dimension))
+
+        // 设置字体，默认楷体
         var font = Font("楷体", 2, 6)
         try {
             val aixing = FileInputStream(File("${wc.dataFolder}/${Config.fontName}"))
@@ -57,7 +66,7 @@ object GenerateCloud {
             aixing.close()
             font = dynamicFont.deriveFont(2)
         } catch (e: Exception) {
-            wc.logger.error(e)
+            wc.logger.info("未检测到字体文件，默认使用楷体生成词云")
         }
 
         wordCloud.setKumoFont(KumoFont(font))
