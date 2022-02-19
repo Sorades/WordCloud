@@ -17,3 +17,5 @@
 <img src="https://gitee.com/LeoSora/pic-go/raw/master/img/IMG_20220219_154027.jpg" alt="image-20220219154051676" style="zoom: 50%;" />
 
 如果要使用遮罩或修改字体，将遮罩图片和字体文件放置于data文件夹下，并修改配置文件中的对应名称即可
+
+**由于数据的存储直接使用mirai的AutoSavePluginData，大量数据可能会导致处理很慢，估计只适合小群使用**
